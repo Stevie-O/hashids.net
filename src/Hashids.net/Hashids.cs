@@ -41,7 +41,7 @@ namespace HashidsNet
         /// Instantiates a new Hashids with the default setup.
         /// </summary>
         public Hashids() : this(string.Empty, 0, DEFAULT_ALPHABET, DEFAULT_SEPS)
-        {}
+        { }
 
         /// <summary>
         /// Instantiates a new Hashids en/de-coder.
@@ -73,8 +73,13 @@ namespace HashidsNet
         /// <returns>the hashed string</returns>
         public virtual string Encode(params int[] numbers)
         {
-            if (numbers.Any(n => n < 0)) return string.Empty;
-            return this.GenerateHashFrom(numbers.Select(n => (long)n).ToArray());
+            ulong[] ulongs = new ulong[numbers.Length];
+            for (int i = 0; i < numbers.Length; i++)
+            {
+                if (numbers[i] < 0) return string.Empty;
+                ulongs[i] = (ulong)numbers[i];
+            }
+            return this.GenerateHashFrom(ulongs);
         }
 
         /// <summary>
@@ -137,13 +142,49 @@ namespace HashidsNet
         }
 
         /// <summary>
+        /// Gets/sets whether or not to exploit array variance to improve performance of <see cref="DecodeLong"/>.
+        /// </summary>
+        /// <remarks>
+        /// If this is set to true, an unnecessary memory allocation and copy is avoided, but
+        /// the array returned by <see cref="DecodeLong"/> behaves oddly when accessed via reflection,
+        /// such as what happens when tests are performed.
+        /// </remarks>
+        public static bool ExploitArrayVariance { get; set; }
+
+        /// <summary>
         /// Decodes the provided hashed string into an array of longs 
         /// </summary>
         /// <param name="hash">the hashed string</param>
         /// <returns>the numbers</returns>
         public long[] DecodeLong(string hash)
         {
+            var ulongs = GetNumbersFrom(hash);
+            if (ExploitArrayVariance)
+            {
+                // C# doesn't allow ulong[]->long[] variance, but CLR does
+                return (long[])(object)ulongs;
+            }
+            // go the slow way
+#if CORE
+            return ulongs.Select(x => (long)x).ToArray();
+#else
+            return Array.ConvertAll<ulong, long>(ulongs, x => (long)x);
+#endif
+        }
+
+        public ulong[] DecodeUnsignedLong(string hash)
+        {
             return this.GetNumbersFrom(hash);
+        }
+
+        /// <summary>
+        /// Encodes a sequence of unsigned 64-bit integers
+        /// </summary>
+        /// <param name="numbers"></param>
+        /// <returns></returns>
+        public string EncodeUnsignedLong(params ulong[] numbers)
+        {
+            return this.GenerateHashFrom(numbers);
         }
 
         /// <summary>
@@ -154,7 +195,10 @@ namespace HashidsNet
         public string EncodeLong(params long[] numbers)
         {
             if (numbers.Any(n => n < 0)) return string.Empty;
-            return this.GenerateHashFrom(numbers);
+            // C# does not allow array variance for value types, but CLR does; an intermediate cast to object
+            // lets us exploit this.
+            var ulongs = (ulong[])(object)numbers;
+            return this.GenerateHashFrom(ulongs);
         }
 
         /// <summary>
@@ -279,7 +323,7 @@ namespace HashidsNet
         /// </summary>
         /// <param name="numbers"></param>
         /// <returns></returns>
-        private string GenerateHashFrom(long[] numbers)
+        private string GenerateHashFrom(ulong[] numbers)
         {
             if (numbers == null || numbers.Length == 0)
                 return string.Empty;
@@ -289,7 +333,7 @@ namespace HashidsNet
 
             long numbersHashInt = 0;
             for (var i = 0; i < numbers.Length; i++)
-                numbersHashInt += (int)(numbers[i] % (i + 100));
+                numbersHashInt += (int)(numbers[i] % (ulong)(i + 100));
 
             var lottery = alphabet[(int)(numbersHashInt % alphabet.Length)];
             ret.Append(lottery.ToString());
@@ -306,7 +350,7 @@ namespace HashidsNet
 
                 if (i + 1 < numbers.Length)
                 {
-                    number %= ((int)last[0] + i);
+                    number %= (uint)((int)last[0] + i);
                     var sepsIndex = ((int)number % this.seps.Length);
 
                     ret.Append(this.seps[sepsIndex]);
@@ -347,39 +391,39 @@ namespace HashidsNet
             return ret.ToString();
         }
 
-        private string Hash(long input, string alphabet)
+        private string Hash(ulong input, string alphabet)
         {
             var hash = new StringBuilder();
 
             do
             {
-                hash.Insert(0, alphabet[(int)(input % alphabet.Length)]);
-                input = (input / alphabet.Length);
+                hash.Insert(0, alphabet[(int)(input % (uint)alphabet.Length)]);
+                input = (input / (uint)alphabet.Length);
             } while (input > 0);
 
             return hash.ToString();
         }
 
-        private long Unhash(string input, string alphabet)
+        private ulong Unhash(string input, string alphabet)
         {
-            long number = 0;
+            ulong number = 0;
 
             for (var i = 0; i < input.Length; i++)
             {
-                var pos = alphabet.IndexOf(input[i]);
-                number += (long)(pos * Math.Pow(alphabet.Length, input.Length - i - 1));
+                var pos = (uint)alphabet.IndexOf(input[i]);
+                number = number * (uint)alphabet.Length + pos;
             }
 
             return number;
         }
 
-        private long[] GetNumbersFrom(string hash)
+        private ulong[] GetNumbersFrom(string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))
-                return new long[0];
+                return new ulong[0];
 
             var alphabet = new string(this.alphabet.ToCharArray());
-            var ret = new List<long>();
+            var ret = new List<ulong>();
             int i = 0;
 
             var hashBreakdown = guardsRegex.Replace(hash, " ");
@@ -406,7 +450,7 @@ namespace HashidsNet
                     ret.Add(Unhash(subHash, alphabet));
                 }
 
-                if (EncodeLong(ret.ToArray()) != hash)
+                if (EncodeUnsignedLong(ret.ToArray()) != hash)
                     ret.Clear();
             }
 

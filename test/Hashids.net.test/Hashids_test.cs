@@ -48,7 +48,6 @@ namespace HashidsNet.test
             hashids.Encode(123000).Should().Be("58LzD");
             hashids.Encode(456000000).Should().Be("5gn6mQP");
             hashids.Encode(987654321).Should().Be("oyjYvry");
-
         }
 
         [Fact]
@@ -255,6 +254,20 @@ namespace HashidsNet.test
             var mock = new Mock<Hashids>();
             mock.Setup(hashids => hashids.Encode(It.IsAny<int[]>())).Returns("It works");
             mock.Object.Encode(new[] { 1 }).Should().Be("It works");
+        }
+
+        [Fact]
+        void round_trip_test_ulong()
+        {
+            int i;
+            ulong x;
+            for (i = 0, x = 1UL; i < 64; i++, x <<= 1)
+            {
+                hashids.DecodeUnsignedLong(hashids.EncodeUnsignedLong(x - 1)).Should().Equal(x - 1);
+                hashids.DecodeUnsignedLong(hashids.EncodeUnsignedLong(x)).Should().Equal(x);
+                hashids.DecodeUnsignedLong(hashids.EncodeUnsignedLong(x + 1)).Should().Equal(x + 1);
+            }
+            hashids.DecodeUnsignedLong(hashids.EncodeUnsignedLong(ulong.MaxValue)).Should().Equal(ulong.MaxValue);
         }
     }
 }
