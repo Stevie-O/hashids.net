@@ -7,3 +7,4 @@ packages
 *.orig
 .vs
 project.lock.json
+BenchmarkDotNet.Artifacts
