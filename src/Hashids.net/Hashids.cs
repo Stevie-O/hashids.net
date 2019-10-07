@@ -344,13 +344,12 @@ namespace HashidsNet
                 Array.Copy(alphabet, 0, rngData, alphaCopyStart, rngData.Length - alphaCopyStart);
 
                 InPlaceShuffle(alphabet, rngData);
-                var last = this.Hash(number, alphabet);
-
-                ret.Append(last);
+                int lastStart = ret.Length;
+                HashInto(ret, number, alphabet);
 
                 if (i + 1 < numbers.Length)
                 {
-                    number %= (uint)((int)last[0] + i);
+                    number %= (uint)((int)ret[lastStart] + i);
                     var sepsIndex = ((int)number % this.seps.Length);
 
                     ret.Append(this.seps[sepsIndex]);
@@ -392,17 +391,14 @@ namespace HashidsNet
             return ret.ToString();
         }
 
-        private string Hash(ulong input, char[] alphabet)
+        private void HashInto(StringBuilder hash, ulong input, char[] alphabet)
         {
-            var hash = new StringBuilder();
-
+            int offset = hash.Length;
             do
             {
-                hash.Insert(0, alphabet[(int)(input % (uint)alphabet.Length)]);
+                hash.Insert(offset, alphabet[(int)(input % (uint)alphabet.Length)]);
                 input = (input / (uint)alphabet.Length);
             } while (input > 0);
-
-            return hash.ToString();
         }
 
         private ulong Unhash(string input, char[] alphabet)
