@@ -48,6 +48,7 @@ namespace HashidsNet.test
             hashids.Encode(123000).Should().Be("58LzD");
             hashids.Encode(456000000).Should().Be("5gn6mQP");
             hashids.Encode(987654321).Should().Be("oyjYvry");
+            hashids.Encode(int.MaxValue).Should().Be("ykJWW1g");
         }
 
         [Fact]
@@ -59,7 +60,21 @@ namespace HashidsNet.test
 
             hashids.EncodeLong(666555444333222L).Should().Be("KVO9yy1oO5j");
             hashids.EncodeLong(12345678901112L).Should().Be("4bNP1L26r");
-            hashids.EncodeLong(Int64.MaxValue).Should().Be("jvNx4BjM5KYjv");
+            hashids.EncodeLong(long.MaxValue).Should().Be("jvNx4BjM5KYjv");
+        }
+
+        [Fact]
+        void it_encodes_a_single_ulong()
+        {
+            hashids.EncodeUnsignedLong(1UL).Should().Be("NV");
+            hashids.EncodeUnsignedLong(2147483648UL).Should().Be("21OjjRK");
+            hashids.EncodeUnsignedLong(4294967296UL).Should().Be("D54yen6");
+
+            hashids.EncodeUnsignedLong(666555444333222UL).Should().Be("KVO9yy1oO5j");
+            hashids.EncodeUnsignedLong(12345678901112UL).Should().Be("4bNP1L26r");
+            hashids.EncodeUnsignedLong( (ulong)long.MaxValue).Should().Be("jvNx4BjM5KYjv");
+            hashids.EncodeUnsignedLong(1UL + (ulong)long.MaxValue).Should().Be("DxMP5qew6mYe1");
+            hashids.EncodeUnsignedLong(ulong.MaxValue).Should().Be("zXVjmzBamYlqX");
         }
 
         [Fact]
@@ -270,4 +285,5 @@ namespace HashidsNet.test
             hashids.DecodeUnsignedLong(hashids.EncodeUnsignedLong(ulong.MaxValue)).Should().Equal(ulong.MaxValue);
         }
     }
+
 }

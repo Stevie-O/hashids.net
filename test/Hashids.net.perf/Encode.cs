@@ -6,37 +6,36 @@ using BenchmarkDotNet.Attributes;
 namespace HashidsNet.perf
 {
     [MemoryDiagnoser]
-    public class Hashids_perf2
+    public class Encode
     {
         Hashids h;
 
-        static Hashids_perf2()
+        static Encode()
         {
             Hashids.ExploitArrayVariance = true;
         }
 
-        public Hashids_perf2()
+        public Encode()
         {
             h = new Hashids();
         }
 
         [Benchmark]
-        public int RoundTripInt32()
+        public string EncodeInt32()
         {
-            return h.Decode(h.Encode(int.MaxValue))[0];
+            return h.Encode(int.MaxValue);
         }
 
         [Benchmark]
-        public long RoundTripInt64()
+        public string EncodeInt64()
         {
-            return h.DecodeLong(h.EncodeLong(long.MaxValue))[0];
+            return h.EncodeLong(long.MaxValue);
         }
 
         [Benchmark]
-        public ulong RoundTripUInt64()
+        public string EncodeUInt64()
         {
-            return h.DecodeUnsignedLong(h.EncodeUnsignedLong(ulong.MaxValue))[0];
+            return h.EncodeUnsignedLong(ulong.MaxValue);
         }
     }
 }
-
