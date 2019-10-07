@@ -423,7 +423,6 @@ namespace HashidsNet
                 return InvalidCodeResult;
 
             var alphabet = this.alphabet;
-            var ret = new List<ulong>();
             int i = 0;
 
             var hashBreakdown = guardsRegex.Replace(hash, " ");
@@ -440,6 +439,7 @@ namespace HashidsNet
 
                 hashBreakdown = sepsRegex.Replace(hashBreakdown, " ");
                 hashArray = hashBreakdown.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var result = new ulong[hashArray.Length];
 
                 for (var j = 0; j < hashArray.Length; j++)
                 {
@@ -447,10 +447,9 @@ namespace HashidsNet
                     var buffer = lottery + this.salt + alphabet;
 
                     alphabet = ConsistentShuffle(alphabet, buffer.Substring(0, alphabet.Length));
-                    ret.Add(Unhash(subHash, alphabet));
+                    result[j] = Unhash(subHash, alphabet);
                 }
 
-                var result = ret.ToArray();
                 if (EncodeUnsignedLong(result) == hash)
                     return result;
             }
