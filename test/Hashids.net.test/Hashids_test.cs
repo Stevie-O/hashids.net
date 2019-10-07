@@ -291,6 +291,20 @@ namespace HashidsNet.test
             var h = new Hashids();
             h.Decode("a").Should().Equal(new int[0]);
         }
+
+        [Fact]
+        void very_long_salt_test()
+        {
+            var h = new Hashids("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris tristique massa at nulla scelerisque fringilla. Vestibulum amet.");
+            h.DecodeLong("EotwcLFonpY5b28xGbo").Should().Equal(new[] { 1L, 2L, 3L, long.MaxValue });
+        }
+
+        [Fact]
+        void spacey_salt_test()
+        {
+            var h = new Hashids(new string(' ', 128) + "x");
+            h.DecodeLong("Q9cXFMs62EeGqvD0Vq6").Should().Equal(new[] { 1L, 2L, 3L, long.MaxValue });
+        }
     }
 
 }

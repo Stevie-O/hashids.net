@@ -60,6 +60,9 @@ namespace HashidsNet
 
             this.SetupSeps(seps);
             this.SetupGuards();
+            // truncate salt to the shortest meaningful length
+            if (salt.Length > this.alphabet.Length - 1)
+                this.salt = salt.Substring(0, this.alphabet.Length - 1);
         }
 
         /// <summary>
@@ -321,21 +324,26 @@ namespace HashidsNet
                 return string.Empty;
 
             var ret = new StringBuilder();
-            var alphabet = this.alphabet;
+            var alphabet = this.alphabet.ToCharArray();
+            var rngData = new char[alphabet.Length];
 
             long numbersHashInt = 0;
             for (var i = 0; i < numbers.Length; i++)
                 numbersHashInt += (int)(numbers[i] % (ulong)(i + 100));
 
             var lottery = alphabet[(int)(numbersHashInt % alphabet.Length)];
-            ret.Append(lottery.ToString());
+            ret.Append(lottery);
+
+            rngData[0] = lottery;
+            salt.CopyTo(0, rngData, 1, salt.Length);
+            int alphaCopyCount = rngData.Length - salt.Length - 1;
 
             for (var i = 0; i < numbers.Length; i++)
             {
                 var number = numbers[i];
-                var buffer = lottery + this.salt + alphabet;
+                Array.Copy(alphabet, 0, rngData, salt.Length + 1, alphaCopyCount);
 
-                alphabet = ConsistentShuffle(alphabet, buffer);
+                InPlaceShuffle(alphabet, rngData);
                 var last = this.Hash(number, alphabet);
 
                 ret.Append(last);
@@ -368,9 +376,10 @@ namespace HashidsNet
             var halfLength = (int)(alphabet.Length / 2);
             while (ret.Length < this.minHashLength)
             {
-                alphabet = ConsistentShuffle(alphabet, alphabet);
-                ret.Insert(0, alphabet.Substring(halfLength));
-                ret.Append(alphabet.Substring(0, halfLength));
+                Array.Copy(alphabet, rngData, alphabet.Length);
+                InPlaceShuffle(alphabet, rngData);
+                ret.Insert(0, alphabet, halfLength, alphabet.Length - halfLength);
+                ret.Append(alphabet, 0, halfLength);
 
                 var excess = ret.Length - this.minHashLength;
                 if (excess > 0)
@@ -383,7 +392,7 @@ namespace HashidsNet
             return ret.ToString();
         }
 
-        private string Hash(ulong input, string alphabet)
+        private string Hash(ulong input, char[] alphabet)
         {
             var hash = new StringBuilder();
 
@@ -459,13 +468,20 @@ namespace HashidsNet
         /// <param name="alphabet"></param>
         /// <param name="salt"></param>
         /// <returns></returns>
+        /// 
         private string ConsistentShuffle(string alphabet, string salt)
         {
             if (string.IsNullOrWhiteSpace(salt))
                 return alphabet;
 
-            int n;
             var letters = alphabet.ToCharArray();
+            InPlaceShuffle(letters, salt.ToCharArray());
+            return new string(letters);
+        }
+
+        static void InPlaceShuffle(char[] letters, char[] salt)
+        {
+            int n;
             for (int i = letters.Length - 1, v = 0, p = 0; i > 0; i--, v++)
             {
                 v %= salt.Length;
@@ -476,8 +492,6 @@ namespace HashidsNet
                 letters[j] = letters[i];
                 letters[i] = temp;
             }
-
-            return new string(letters);
         }
 
     }
