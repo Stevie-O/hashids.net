@@ -420,9 +420,9 @@ namespace HashidsNet
         private ulong[] GetNumbersFrom(string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))
-                return new ulong[0];
+                return InvalidCodeResult;
 
-            var alphabet = new string(this.alphabet.ToCharArray());
+            var alphabet = this.alphabet;
             var ret = new List<ulong>();
             int i = 0;
 
@@ -450,12 +450,15 @@ namespace HashidsNet
                     ret.Add(Unhash(subHash, alphabet));
                 }
 
-                if (EncodeUnsignedLong(ret.ToArray()) != hash)
-                    ret.Clear();
+                var result = ret.ToArray();
+                if (EncodeUnsignedLong(result) == hash)
+                    return result;
             }
 
-            return ret.ToArray();
+            return InvalidCodeResult;
         }
+
+        static readonly ulong[] InvalidCodeResult = new ulong[0];
 
         /// <summary>
         /// 
