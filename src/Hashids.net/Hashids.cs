@@ -22,7 +22,7 @@ namespace HashidsNet
         private string alphabet;
         private string salt;
         private string seps;
-        private string guards;
+        private char[] guards;
         private int minHashLength;
 
         private Regex guardsRegex;
@@ -301,13 +301,13 @@ namespace HashidsNet
 
             if (alphabet.Length < 3)
             {
-                guards = seps.Substring(0, guardCount);
+                guards = seps.ToCharArray(0, guardCount);
                 seps = seps.Substring(guardCount);
             }
 
             else
             {
-                guards = alphabet.Substring(0, guardCount);
+                guards = alphabet.ToCharArray(0, guardCount);
                 alphabet = alphabet.Substring(guardCount);
             }
 
@@ -417,6 +417,16 @@ namespace HashidsNet
             return number;
         }
 
+        string removeGuards(string s)
+        {
+            int g0 = s.IndexOfAny(guards);
+            if (g0 < 0) return s;
+            g0++;
+            int g1 = s.IndexOfAny(guards, g0);
+            if (g1 < 0) g1 = s.Length;
+            return s.Substring(g0, g1 - g0);
+        }
+
         private ulong[] GetNumbersFrom(string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))
@@ -425,35 +435,28 @@ namespace HashidsNet
             var alphabet = this.alphabet;
             int i = 0;
 
-            var hashBreakdown = guardsRegex.Replace(hash, " ");
+            var hashBreakdown = removeGuards(hash);
+            if (hashBreakdown.Length == 0)
+                return InvalidCodeResult;
+
+            var lottery = hashBreakdown[0];
+            hashBreakdown = hashBreakdown.Substring(1);
+
+            hashBreakdown = sepsRegex.Replace(hashBreakdown, " ");
             var hashArray = hashBreakdown.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var result = new ulong[hashArray.Length];
 
-            if (hashArray.Length == 3 || hashArray.Length == 2)
-                i = 1;
-
-            hashBreakdown = hashArray[i];
-            if (hashBreakdown[0] != default(char))
+            for (var j = 0; j < hashArray.Length; j++)
             {
-                var lottery = hashBreakdown[0];
-                hashBreakdown = hashBreakdown.Substring(1);
+                var subHash = hashArray[j];
+                var buffer = lottery + this.salt + alphabet;
 
-                hashBreakdown = sepsRegex.Replace(hashBreakdown, " ");
-                hashArray = hashBreakdown.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                var result = new ulong[hashArray.Length];
-
-                for (var j = 0; j < hashArray.Length; j++)
-                {
-                    var subHash = hashArray[j];
-                    var buffer = lottery + this.salt + alphabet;
-
-                    alphabet = ConsistentShuffle(alphabet, buffer.Substring(0, alphabet.Length));
-                    result[j] = Unhash(subHash, alphabet);
-                }
-
-                if (EncodeUnsignedLong(result) == hash)
-                    return result;
+                alphabet = ConsistentShuffle(alphabet, buffer.Substring(0, alphabet.Length));
+                result[j] = Unhash(subHash, alphabet);
             }
 
+            if (EncodeUnsignedLong(result) == hash)
+                return result;
             return InvalidCodeResult;
         }
 

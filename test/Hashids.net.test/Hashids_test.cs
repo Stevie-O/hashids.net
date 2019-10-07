@@ -284,6 +284,13 @@ namespace HashidsNet.test
             }
             hashids.DecodeUnsignedLong(hashids.EncodeUnsignedLong(ulong.MaxValue)).Should().Equal(ulong.MaxValue);
         }
+
+        [Fact]
+        void decode_bogus_all_padding()
+        {
+            var h = new Hashids();
+            h.Decode("a").Should().Equal(new int[0]);
+        }
     }
 
 }
