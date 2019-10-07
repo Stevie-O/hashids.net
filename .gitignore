@@ -8,3 +8,5 @@ packages
 .vs
 project.lock.json
 BenchmarkDotNet.Artifacts
+*.vsp
+*.psess

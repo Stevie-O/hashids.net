@@ -21,12 +21,9 @@ namespace HashidsNet
 
         private string alphabet;
         private string salt;
-        private string seps;
+        private char[] seps;
         private char[] guards;
         private int minHashLength;
-
-        private Regex guardsRegex;
-        private Regex sepsRegex;
 
         //  Creates the Regex in the first usage, speed up first use of non hex methods
 #if CORE
@@ -56,13 +53,12 @@ namespace HashidsNet
 
             this.salt = salt;
             this.alphabet = new string(alphabet.ToCharArray().Distinct().ToArray());
-            this.seps = seps;
             this.minHashLength = minHashLength;
 
             if (this.alphabet.Length < 16)
                 throw new ArgumentException("alphabet must contain atleast 4 unique characters.", "alphabet");
 
-            this.SetupSeps();
+            this.SetupSeps(seps);
             this.SetupGuards();
         }
 
@@ -258,7 +254,7 @@ namespace HashidsNet
         /// <summary>
         /// 
         /// </summary>
-        private void SetupSeps()
+        private void SetupSeps(string seps)
         {
             // seps should contain only characters present in alphabet; 
             seps = new string(seps.ToCharArray().Intersect(alphabet.ToCharArray()).ToArray());
@@ -284,12 +280,15 @@ namespace HashidsNet
                 else seps = seps.Substring(0, sepsLength);
             }
 
-#if CORE
-            sepsRegex = new Regex(string.Concat("[", seps, "]"));
-#else
-            sepsRegex = new Regex(string.Concat("[", seps, "]"), RegexOptions.Compiled);
-#endif
+            this.seps = seps.ToCharArray();
             alphabet = ConsistentShuffle(alphabet, salt);
+        }
+
+        static T[] Slice<T>(T[] array, int offset, int count)
+        {
+            T[] slice = new T[count];
+            Array.Copy(array, offset, slice, 0, count);
+            return slice;
         }
 
         /// <summary>
@@ -301,21 +300,14 @@ namespace HashidsNet
 
             if (alphabet.Length < 3)
             {
-                guards = seps.ToCharArray(0, guardCount);
-                seps = seps.Substring(guardCount);
+                guards = Slice(seps, 0, guardCount);
+                seps = Slice(seps, guardCount, seps.Length - guardCount);
             }
-
             else
             {
                 guards = alphabet.ToCharArray(0, guardCount);
                 alphabet = alphabet.Substring(guardCount);
             }
-
-#if CORE
-            guardsRegex = new Regex(string.Concat("[", guards, "]"));
-#else
-            guardsRegex = new Regex(string.Concat("[", guards, "]"), RegexOptions.Compiled);
-#endif
         }
 
         /// <summary>
@@ -442,8 +434,7 @@ namespace HashidsNet
             var lottery = hashBreakdown[0];
             hashBreakdown = hashBreakdown.Substring(1);
 
-            hashBreakdown = sepsRegex.Replace(hashBreakdown, " ");
-            var hashArray = hashBreakdown.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var hashArray = hashBreakdown.Split(seps, StringSplitOptions.RemoveEmptyEntries);
             var result = new ulong[hashArray.Length];
 
             for (var j = 0; j < hashArray.Length; j++)
