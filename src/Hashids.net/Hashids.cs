@@ -336,12 +336,12 @@ namespace HashidsNet
 
             rngData[0] = lottery;
             salt.CopyTo(0, rngData, 1, salt.Length);
-            int alphaCopyCount = rngData.Length - salt.Length - 1;
+            int alphaCopyStart = salt.Length + 1;
 
             for (var i = 0; i < numbers.Length; i++)
             {
                 var number = numbers[i];
-                Array.Copy(alphabet, 0, rngData, salt.Length + 1, alphaCopyCount);
+                Array.Copy(alphabet, 0, rngData, alphaCopyStart, rngData.Length - alphaCopyStart);
 
                 InPlaceShuffle(alphabet, rngData);
                 var last = this.Hash(number, alphabet);
@@ -405,13 +405,13 @@ namespace HashidsNet
             return hash.ToString();
         }
 
-        private ulong Unhash(string input, string alphabet)
+        private ulong Unhash(string input, char[] alphabet)
         {
             ulong number = 0;
 
             for (var i = 0; i < input.Length; i++)
             {
-                var pos = (uint)alphabet.IndexOf(input[i]);
+                var pos = (uint)Array.IndexOf(alphabet, input[i]);
                 number = number * (uint)alphabet.Length + pos;
             }
 
@@ -433,8 +433,9 @@ namespace HashidsNet
             if (string.IsNullOrWhiteSpace(hash))
                 return InvalidCodeResult;
 
-            var alphabet = this.alphabet;
-            int i = 0;
+            var alphabet = this.alphabet.ToCharArray();
+            var rngData = new char[alphabet.Length];
+            int alphaCopyStart = salt.Length + 1;
 
             var hashBreakdown = removeGuards(hash);
             if (hashBreakdown.Length == 0)
@@ -443,15 +444,18 @@ namespace HashidsNet
             var lottery = hashBreakdown[0];
             hashBreakdown = hashBreakdown.Substring(1);
 
+            rngData[0] = lottery;
+            salt.CopyTo(0, rngData, 1, salt.Length);
+
             var hashArray = hashBreakdown.Split(seps, StringSplitOptions.RemoveEmptyEntries);
             var result = new ulong[hashArray.Length];
 
             for (var j = 0; j < hashArray.Length; j++)
             {
                 var subHash = hashArray[j];
-                var buffer = lottery + this.salt + alphabet;
+                Array.Copy(alphabet, 0, rngData, alphaCopyStart, rngData.Length - alphaCopyStart);
 
-                alphabet = ConsistentShuffle(alphabet, buffer.Substring(0, alphabet.Length));
+                InPlaceShuffle(alphabet, rngData);
                 result[j] = Unhash(subHash, alphabet);
             }
 
