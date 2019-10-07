@@ -335,7 +335,7 @@ namespace HashidsNet
                 var number = numbers[i];
                 var buffer = lottery + this.salt + alphabet;
 
-                alphabet = ConsistentShuffle(alphabet, buffer.Substring(0, alphabet.Length));
+                alphabet = ConsistentShuffle(alphabet, buffer);
                 var last = this.Hash(number, alphabet);
 
                 ret.Append(last);
