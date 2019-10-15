@@ -124,6 +124,70 @@ namespace HashidsNet
             return this.EncodeLong(numbers.ToArray());
         }
 
+        static ulong[] GuidToUInt64s(Guid g)
+        {
+            var tmp = g.ToByteArray();
+            ulong[] result = new ulong[2];
+            result[0] =
+                    ((ulong)tmp[0]) |
+                    ((ulong)tmp[1] << (1 * 8)) |
+                    ((ulong)tmp[2] << (2 * 8)) |
+                    ((ulong)tmp[3] << (3 * 8)) |
+                    ((ulong)tmp[4] << (4 * 8)) |
+                    ((ulong)tmp[5] << (5 * 8)) |
+                    ((ulong)tmp[6] << (6 * 8)) |
+                    ((ulong)tmp[7] << (7 * 8))
+                    ;
+            result[1] =
+                    ((ulong)tmp[8+0]) |
+                    ((ulong)tmp[8 + 1] << (1 * 8)) |
+                    ((ulong)tmp[8 + 2] << (2 * 8)) |
+                    ((ulong)tmp[8 + 3] << (3 * 8)) |
+                    ((ulong)tmp[8 + 4] << (4 * 8)) |
+                    ((ulong)tmp[8 + 5] << (5 * 8)) |
+                    ((ulong)tmp[8 + 6] << (6 * 8)) |
+                    ((ulong)tmp[8 + 7] << (7 * 8))
+                    ;
+            return result;
+        }
+
+        static Guid UInt64sToGuid(ulong[] x)
+        {
+            if (x == null || x.Length != 2) return Guid.Empty;
+            byte[] bytes = new byte[16];
+            var n = x[0];
+            bytes[0] = (byte)(n);
+            bytes[1] = (byte)(n >> (1 * 8));
+            bytes[2] = (byte)(n >> (2 * 8));
+            bytes[3] = (byte)(n >> (3 * 8));
+            bytes[4] = (byte)(n >> (4 * 8));
+            bytes[5] = (byte)(n >> (5 * 8));
+            bytes[6] = (byte)(n >> (6 * 8));
+            bytes[7] = (byte)(n >> (7 * 8));
+            n = x[1];
+            bytes[8 + 0] = (byte)(n);
+            bytes[8 + 1] = (byte)(n >> (1 * 8));
+            bytes[8 + 2] = (byte)(n >> (2 * 8));
+            bytes[8 + 3] = (byte)(n >> (3 * 8));
+            bytes[8 + 4] = (byte)(n >> (4 * 8));
+            bytes[8 + 5] = (byte)(n >> (5 * 8));
+            bytes[8 + 6] = (byte)(n >> (6 * 8));
+            bytes[8 + 7] = (byte)(n >> (7 * 8));
+            return new Guid(bytes);
+        }
+
+        public string EncodeGuid(Guid g)
+        {
+            var ulongs = GuidToUInt64s(g);
+            return EncodeUnsignedLong(ulongs);
+        }
+
+        public Guid DecodeGuid(string s)
+        {
+            var ulongs = DecodeUnsignedLong(s);
+            return UInt64sToGuid(ulongs);
+        }
+
         /// <summary>
         /// Decodes the provided hash into a hex-string
         /// </summary>

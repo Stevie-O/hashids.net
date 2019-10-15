@@ -305,6 +305,22 @@ namespace HashidsNet.test
             var h = new Hashids(new string(' ', 128) + "x");
             h.DecodeLong("Q9cXFMs62EeGqvD0Vq6").Should().Equal(new[] { 1L, 2L, 3L, long.MaxValue });
         }
+
+        [Fact]
+        void it_encodes_a_guid()
+        {
+            var g = new Guid("FB95002E-4BC2-4D68-9259-46513FF92420");
+            hashids.EncodeGuid(g)
+                .Should().Be("e7oL3Bl9BzvMWTZQnql7DbjlP4");
+        }
+
+        [Fact]
+        void it_decodes_a_guid()
+        {
+            var g = new Guid("FB95002E-4BC2-4D68-9259-46513FF92420");
+            hashids.DecodeGuid("e7oL3Bl9BzvMWTZQnql7DbjlP4")
+                .Should().Be(g);
+        }
     }
 
 }
